@@ -6,7 +6,7 @@ FREQUENCY=5
 
 # System override the defaults
 if [ -f /etc/default/closure ]; then
-        . /etc/default/closure
+	. /etc/default/closure
 fi
 
 if ! [ -r "$CLOSURE_COMPILER" ]; then
@@ -18,7 +18,7 @@ COMPILE="java -jar $CLOSURE_COMPILER"
 
 # First argument can be the directory
 if [ -n "$1" ]; then
-        cd "$1" || exit 1
+	cd "$1" || exit 1
 fi
 
 ### THE MEAT ###
@@ -26,16 +26,21 @@ fi
 
 # Cross-platform growl notification #
 notify() {
-        TEXT="$@"
-        if which growlnotify >/dev/null 2>&1; then
-                growlnotify -n "Closure Compiler" -w << _EOM_
+	TEXT="$@"
+	if which growlnotify >/dev/null 2>&1; then
+		growlnotify -n "Closure Compiler" -w << _EOM_
 $TEXT
 _EOM_
-        elif which notify-send >/dev/null 2>&1; then
-                notify-send -t 3000 "Closure Compiler" "$TEXT" 2>/dev/null || echo "$TEXT"
+	elif which notify-send >/dev/null 2>&1; then
+		notify-send -t 3000 "Closure Compiler" "$TEXT" 2>/dev/null || echo "$TEXT"
 	else
-		echo "$TEXT"
-        fi
+		echo "    $TEXT" | sed 's/\n/\n    /'
+	fi
+}
+
+# Clear a line #
+clearline() {
+	echo -e -n "\r                                                          \r" > /dev/stdout
 }
 
 # Cross-platform stat command #
@@ -54,33 +59,39 @@ DIRECTORY=$(pwd)
 
 echo "Scanning directory: $DIRECTORY ..."
 
+COUNT=0
+SPINNER="|/-\\"
 while true; do
-        find . -maxdepth 1 -name '*.js' | while read JSFILE; do
-                # IGNORE already minified files
-                [ $(basename $JSFILE .min.js) != $(basename $JSFILE) ] && continue
-                JSMINFILE="$(basename $JSFILE .js).min.js"
-                if [ -f $JSMINFILE ]; then
-                        # checking if min file is older
-                        if [ $($STAT $JSMINFILE) -lt $($STAT $JSFILE) ]; then
-                                echo "  minifying: $JSFILE => $JSMINFILE"
-                                MESSAGE=$($COMPILE --js $JSFILE --js_output_file $JSMINFILE 2>&1)
-                                if [ $? -eq 0 ]; then
-                                	notify ${MESSAGE:-$DIRECTORY/$(basename $JSFILE) => $JSMINFILE}
-                                else
-                                        notify "Error minifying $JSFILE, see the log for more details"
+	clearline
+	echo -n "  "${SPINNER:$COUNT:1} > /dev/stdout
+	find . -maxdepth 1 -name '*.js' | while read JSFILE; do
+		# IGNORE already minified files
+		[ $(basename $JSFILE .min.js) != $(basename $JSFILE) ] && continue
+		JSMINFILE="$(basename $JSFILE .js).min.js"
+		if [ -f $JSMINFILE ]; then
+			# checking if min file is older
+			if [ $($STAT $JSMINFILE) -lt $($STAT $JSFILE) ]; then
+				clearline
+				echo "  minifying: $JSFILE => $JSMINFILE"
+				MESSAGE=$($COMPILE --js $JSFILE --js_output_file $JSMINFILE 2>&1)
+				if [ $? -eq 0 ]; then
+					notify ${MESSAGE:-$DIRECTORY/$(basename $JSFILE) => $JSMINFILE}
+				else
+					notify "Error minifying $JSFILE, see the log for more details"
 					echo "$MESSAGE" >&2
-                                fi
-                        fi
-                else
-                        echo "  minifying: $JSFILE => $JSMINFILE"
-                        MESSAGE=$($COMPILE --js $JSFILE --js_output_file $JSMINFILE 2>&1)
-                        if [ $? -eq 0 ]; then
-                                notify ${MESSAGE:-$DIRECTORY/$(basename $JSFILE) => $JSMINFILE}
-                        else
-                                notify "Error minifying $JSFILE, see the log for more details"
+				fi
+			fi
+		else
+			echo "  minifying: $JSFILE => $JSMINFILE"
+			MESSAGE=$($COMPILE --js $JSFILE --js_output_file $JSMINFILE 2>&1)
+			if [ $? -eq 0 ]; then
+				notify ${MESSAGE:-$DIRECTORY/$(basename $JSFILE) => $JSMINFILE}
+			else
+				notify "Error minifying $JSFILE, see the log for more details"
 				echo "$MESSAGE" >&2
-                        fi
-                fi
-        done
-        sleep $FREQUENCY
+			fi
+		fi
+	done
+	sleep $FREQUENCY
+	COUNT=$(expr $(expr $COUNT + 1) % 4)
 done
