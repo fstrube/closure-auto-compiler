@@ -39,5 +39,6 @@ Usage
 Run the following command in a terminal to start auto-compiling:
 
     user@hostname:~$ js-auto-compiler /path/to/js/
-
+    Scanning directory: /path/to/js ...
+      minifying: somefile.js => somefile.min.js
 
