@@ -82,6 +82,7 @@ while true; do
 				fi
 			fi
 		else
+			clearline
 			echo "  minifying: $JSFILE => $JSMINFILE"
 			MESSAGE=$($COMPILE --js $JSFILE --js_output_file $JSMINFILE 2>&1)
 			if [ $? -eq 0 ]; then
