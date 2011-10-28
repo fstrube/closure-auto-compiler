@@ -28,7 +28,7 @@ via `chmod +x`).
 Create a configuration file called `/etc/default/closure` with your desired polling
 frequency and the path to the `compiler.jar` file. Example
 
-##### /etc/default/closure #####
+#### /etc/default/closure ####
 
     CLOSURE_COMPILER="/usr/local/lib/compiler.jar"
     FREQUENCY=5 # poll every 5 seconds
